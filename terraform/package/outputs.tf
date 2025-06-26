@@ -1,37 +1,29 @@
-output "integration_service" {
-  value = {
-    aws : {
-      ecs : module.ecs
-    }
-  }
-}
-
 output "s3_config_bucket" {
   description = "S3 bucket name for configuration files"
-  value       = module.ecs.s3_config_bucket
+  value       = aws_s3_bucket.config.bucket
 }
 
 output "loki_load_balancer_dns" {
   description = "The DNS name of the load balancer for the Loki service"
-  value       = module.ecs.loki_load_balancer_dns
+  value       = aws_lb.loki.dns_name
 }
 
 output "prometheus_load_balancer_dns" {
   description = "The DNS name of the load balancer for the Prometheus service"
-  value       = module.ecs.prometheus_load_balancer_dns
+  value       = aws_lb.prometheus.dns_name
 }
 
 output "grafana_load_balancer_dns" {
   description = "The DNS name of the load balancer for the Grafana service"
-  value       = module.ecs.grafana_load_balancer_dns
+  value       = aws_lb.grafana.dns_name
 }
 
 output "tempo_load_balancer_dns" {
   description = "The DNS name of the load balancer for the Tempo service"
-  value       = module.ecs.tempo_load_balancer_dns
+  value       = aws_lb.tempo.dns_name
 }
 
 output "ecs_cluster_name" {
   description = "Name of the ECS cluster"
-  value       = module.ecs.ecs_cluster_name
-}
+  value       = aws_ecs_cluster.main.name
+} 

@@ -1,9 +1,9 @@
 terraform {
   backend "s3" {
-    bucket         = "elemnta-rnd-terraform-state"
-    key            = "terraform.tfstate"
-    dynamodb_table = "elemnta-rnd-terraform-state-lock"
-    region         = "ap-southeast-1"
+    bucket               = "elemnta-rnd-terraform-state"
+    key                  = "terraform.tfstate"
+    dynamodb_table       = "elemnta-rnd-terraform-state-lock"
+    region               = "ap-southeast-1"
     workspace_key_prefix = "elemnta-lgtm"
   }
   required_providers {
@@ -31,6 +31,6 @@ provider "aws" {
 
 
 module "ecs" {
-  source = "./package"
+  source         = "./package"
   service_prefix = "${var.service_name}-${var.environment}"
 }

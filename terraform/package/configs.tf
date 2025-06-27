@@ -18,16 +18,16 @@ resource "aws_s3_object" "loki_config" {
         }
         final_sleep = "0s"
       }
-      chunk_idle_period = "5m"
+      chunk_idle_period   = "5m"
       chunk_retain_period = "30s"
     }
     schema_config = {
       configs = [
         {
-          from = "2020-05-15"
-          store = "boltdb-shipper"
+          from         = "2020-05-15"
+          store        = "boltdb-shipper"
           object_store = "filesystem"
-          schema = "v11"
+          schema       = "v11"
           index = {
             prefix = "index_"
             period = "24h"
@@ -38,17 +38,17 @@ resource "aws_s3_object" "loki_config" {
     storage_config = {
       boltdb_shipper = {
         active_index_directory = "/tmp/loki/boltdb-shipper-active"
-        cache_location = "/tmp/loki/boltdb-shipper-cache"
-        cache_ttl = "24h"
-        shared_store = "filesystem"
+        cache_location         = "/tmp/loki/boltdb-shipper-cache"
+        cache_ttl              = "24h"
+        shared_store           = "filesystem"
       }
       filesystem = {
         directory = "/tmp/loki/chunks"
       }
     }
     limits_config = {
-      enforce_metric_name = false
-      reject_old_samples = true
+      enforce_metric_name        = false
+      reject_old_samples         = true
       reject_old_samples_max_age = "168h"
     }
     chunk_store_config = {
@@ -56,7 +56,7 @@ resource "aws_s3_object" "loki_config" {
     }
     table_manager = {
       retention_deletes_enabled = false
-      retention_period = "0s"
+      retention_period          = "0s"
     }
   })
   content_type = "application/x-yaml"
@@ -68,7 +68,7 @@ resource "aws_s3_object" "prometheus_config" {
   key    = "prometheus/prometheus.yml"
   content = yamlencode({
     global = {
-      scrape_interval = "15s"
+      scrape_interval     = "15s"
       evaluation_interval = "15s"
     }
     rule_files = []
@@ -82,15 +82,15 @@ resource "aws_s3_object" "prometheus_config" {
         ]
       },
       {
-        job_name = "ec2-instances"
+        job_name     = "ec2-instances"
         metrics_path = "/api/metrics"
         ec2_sd_configs = [
           {
             region = "ap-southeast-1"
-            port = 3000
+            port   = 3000
             filters = [
               {
-                name = "tag:Name"
+                name   = "tag:Name"
                 values = ["My Node Service"]
               }
             ]
@@ -99,28 +99,28 @@ resource "aws_s3_object" "prometheus_config" {
         relabel_configs = [
           {
             source_labels = ["__meta_ec2_instance_id"]
-            action = "replace"
-            target_label = "instance_id"
+            action        = "replace"
+            target_label  = "instance_id"
           },
           {
             source_labels = ["__meta_ec2_private_ip"]
-            action = "replace"
-            target_label = "ip"
+            action        = "replace"
+            target_label  = "ip"
           },
           {
             source_labels = ["__meta_ec2_tag_Name"]
-            action = "replace"
-            target_label = "instance_name"
+            action        = "replace"
+            target_label  = "instance_name"
           },
           {
             source_labels = ["__meta_ec2_tag_Environment"]
-            action = "replace"
-            target_label = "environment"
+            action        = "replace"
+            target_label  = "environment"
           },
           {
             source_labels = ["__meta_ec2_availability_zone"]
-            action = "replace"
-            target_label = "availability_zone"
+            action        = "replace"
+            target_label  = "availability_zone"
           }
         ]
       }
@@ -137,23 +137,23 @@ resource "aws_s3_object" "grafana_datasources" {
     apiVersion = 1
     datasources = [
       {
-        name = "Prometheus"
-        type = "prometheus"
-        access = "proxy"
-        url = "http://${aws_lb.prometheus.dns_name}"
+        name      = "Prometheus"
+        type      = "prometheus"
+        access    = "proxy"
+        url       = "http://${aws_lb.prometheus.dns_name}"
         isDefault = true
       },
       {
-        name = "Loki"
-        type = "loki"
+        name   = "Loki"
+        type   = "loki"
         access = "proxy"
-        url = "http://${aws_lb.loki.dns_name}"
+        url    = "http://${aws_lb.loki.dns_name}"
       },
       {
-        name = "Tempo"
-        type = "tempo"
+        name   = "Tempo"
+        type   = "tempo"
         access = "proxy"
-        url = "http://${aws_lb.tempo.dns_name}"
+        url    = "http://${aws_lb.tempo.dns_name}"
         jsonData = {
           httpMethod = "GET"
           serviceMap = {
@@ -188,7 +188,7 @@ resource "aws_s3_object" "tempo_config" {
     metrics_generator = {
       registry = {
         external_labels = {
-          source = "tempo"
+          source  = "tempo"
           cluster = "${var.service_prefix}"
         }
       }
@@ -201,7 +201,7 @@ resource "aws_s3_object" "tempo_config" {
       }
     }
     ingester = {
-      max_block_bytes = 1000000
+      max_block_bytes    = 1000000
       max_block_duration = "5m"
     }
     compactor = {
@@ -236,7 +236,7 @@ resource "aws_s3_object" "tempo_config" {
     query_frontend = {
       search = {
         default_results_limit = 20
-        max_results_limit = 100
+        max_results_limit     = 100
       }
     }
   })

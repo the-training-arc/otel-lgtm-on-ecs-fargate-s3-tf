@@ -4,9 +4,9 @@ resource "aws_ecs_task_definition" "loki" {
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
   cpu                      = "1024"
-  memory                   = "3072"
+  memory                   = "2048"
   execution_role_arn       = aws_iam_role.task_exec_role.arn
-  task_role_arn            = aws_iam_role.monitoring_task_role.arn
+  task_role_arn            = aws_iam_role.loki_task_role.arn
 
   lifecycle {
     create_before_destroy = true
@@ -16,10 +16,14 @@ resource "aws_ecs_task_definition" "loki" {
     name = "config-volume"
   }
 
+  volume {
+    name = "loki-data"
+  }
+
   container_definitions = jsonencode([
     {
       name      = "config-sync"
-      image     = "amazon/aws-cli:latest"
+      image     = "public.ecr.aws/aws-cli/aws-cli:latest"
       essential = false
       command = [
         "s3", "cp", "s3://${aws_s3_bucket.config.bucket}/loki/loki-config.yaml", "/config/loki-config.yaml"
@@ -28,26 +32,57 @@ resource "aws_ecs_task_definition" "loki" {
         {
           sourceVolume  = "config-volume"
           containerPath = "/config"
-          readOnly      = false
         }
       ]
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          awslogs-group         = "/ecs/${var.service_prefix}-loki-config-sync"
+          awslogs-group         = "/ecs/${var.service_prefix}-loki"
+          awslogs-region        = "ap-southeast-1"
+          awslogs-stream-prefix = "config-sync"
+        }
+      }
+    },
+    {
+      name = "loki-init"
+      image = "public.ecr.aws/docker/library/busybox:stable"
+      essential = false
+      user = "root"
+      command = [
+        "sh",
+        "-c",
+        "chown -R 10001:10001 /data && chmod -R 755 /data"
+      ],
+      mountPoints = [
+        {
+          sourceVolume  = "loki-data"
+          containerPath = "/data"
+          readOnly      = false
+        }
+      ],
+      dependsOn = [
+        {
+          containerName = "config-sync"
+          condition     = "SUCCESS"
+        }
+      ]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = "/ecs/${var.service_prefix}-loki"
           awslogs-create-group  = "true"
           awslogs-region        = "ap-southeast-1"
-          awslogs-stream-prefix = "ecs"
+          awslogs-stream-prefix = "loki-init"
         }
       }
     },
     {
       name      = "loki"
-      image     = "public.ecr.aws/bitnami/grafana-loki:2.9.7"
+      image     = "grafana/loki:3.5"
       essential = true
       dependsOn = [
         {
-          containerName = "config-sync"
+          containerName = "loki-init"
           condition     = "SUCCESS"
         }
       ]
@@ -63,6 +98,11 @@ resource "aws_ecs_task_definition" "loki" {
           sourceVolume  = "config-volume"
           containerPath = "/config"
           readOnly      = true
+        },
+        {
+          sourceVolume  = "loki-data"
+          containerPath = "/data",
+          readOnly =  false
         }
       ]
       logConfiguration = {
@@ -71,7 +111,7 @@ resource "aws_ecs_task_definition" "loki" {
           awslogs-group         = "/ecs/${var.service_prefix}-loki"
           awslogs-create-group  = "true"
           awslogs-region        = "ap-southeast-1"
-          awslogs-stream-prefix = "ecs"
+          awslogs-stream-prefix = "loki"
         }
       }
     }
@@ -203,7 +243,7 @@ resource "aws_ecs_task_definition" "grafana" {
     },
     {
       name      = "grafana"
-      image     = "public.ecr.aws/ubuntu/grafana:11.0.0-22.04_stable"
+      image     = "public.ecr.aws/bitnami/grafana:12.0.2-debian-12-r1"
       essential = true
       dependsOn = [
         {
@@ -223,7 +263,7 @@ resource "aws_ecs_task_definition" "grafana" {
       ]
       command = [
         "/bin/bash", "-c",
-        "mkdir -p /etc/grafana/provisioning/datasources && cp /config/datasources.yml /etc/grafana/provisioning/datasources/datasources.yml && exec /run.sh"
+        "cp /config/datasources.yml /opt/bitnami/grafana/conf/provisioning/datasources/datasources.yml && exec /opt/bitnami/scripts/grafana/run.sh"
       ]
       mountPoints = [
         {
@@ -290,7 +330,7 @@ resource "aws_ecs_task_definition" "tempo" {
     },
     {
       name      = "tempo"
-      image     = "public.ecr.aws/bitnami/grafana-tempo:latest"
+      image     = "public.ecr.aws/bitnami/grafana-tempo:2.4.1"
       essential = true
       dependsOn = [
         {

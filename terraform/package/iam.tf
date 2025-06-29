@@ -18,6 +18,11 @@ resource "aws_iam_role_policy_attachment" "ecs_execution" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+resource "aws_iam_role_policy_attachment" "task_exec_s3_config_read" {
+  role       = aws_iam_role.task_exec_role.name
+  policy_arn = aws_iam_policy.s3_config_read_policy_document.arn
+}
+
 # IAM Policy for CloudWatch Logs 
 resource "aws_iam_role_policy" "cloudwatch_logs" {
   name = "${var.service_prefix}-cloudwatch-logs"
@@ -98,7 +103,12 @@ resource "aws_iam_policy" "s3_config_read_policy_document" {
         Effect = "Allow"
         Action = [
           "s3:GetObject",
-          "s3:ListBucket"
+          "s3:ListBucket",
+          "s3:PutObject",
+          "s3:DeleteObject",
+          "s3:HeadObject",
+          "s3:AbortMultipartUpload",
+          "s3:ListMultipartUploadParts"
         ]
         Resource = [
           aws_s3_bucket.config.arn,
@@ -139,6 +149,65 @@ resource "aws_iam_role_policy_attachment" "monitoring_task_role_s3_access" {
 # NEW: Attach S3 config read policy to the Prometheus task role
 resource "aws_iam_role_policy_attachment" "prometheus_role_s3_access" {
   role       = aws_iam_role.prometheus_role.name
+  policy_arn = aws_iam_policy.s3_config_read_policy_document.arn
+}
+
+# 2. Create an IAM policy that allows access to the bucket
+data "aws_iam_policy_document" "loki_s3_access" {
+  statement {
+    actions = [
+      "s3:ListBucket",
+    ]
+    resources = [
+      aws_s3_bucket.loki_data.arn,
+    ]
+  }
+  statement {
+    actions = [
+      "s3:GetObject",
+      "s3:PutObject",
+      "s3:DeleteObject",
+      "s3:HeadObject",
+      "s3:AbortMultipartUpload",
+      "s3:ListMultipartUploadParts"
+    ]
+    resources = [
+      "${aws_s3_bucket.loki_data.arn}/*",
+    ]
+  }
+}
+
+resource "aws_iam_policy" "loki_s3_access" {
+  name   = "${var.service_prefix}-loki-s3-access-policy"
+  policy = data.aws_iam_policy_document.loki_s3_access.json
+}
+
+# 3. Create an IAM Role for your ECS Task
+resource "aws_iam_role" "loki_task_role" {
+  name = "${var.service_prefix}-loki-task-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+      },
+    ]
+  })
+}
+
+# 4. Attach the S3 policy to the role
+resource "aws_iam_role_policy_attachment" "loki_s3" {
+  role       = aws_iam_role.loki_task_role.name
+  policy_arn = aws_iam_policy.loki_s3_access.arn
+}
+
+# Attach the S3 config read policy to the loki task role
+resource "aws_iam_role_policy_attachment" "loki_s3_config_read" {
+  role       = aws_iam_role.loki_task_role.name
   policy_arn = aws_iam_policy.s3_config_read_policy_document.arn
 }
 

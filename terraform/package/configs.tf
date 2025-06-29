@@ -2,62 +2,9 @@
 resource "aws_s3_object" "loki_config" {
   bucket = aws_s3_bucket.config.id
   key    = "loki/loki-config.yaml"
-  content = yamlencode({
-    auth_enabled = false
-    server = {
-      http_listen_port = 3100
-    }
-    ingester = {
-      lifecycler = {
-        address = "127.0.0.1"
-        ring = {
-          kvstore = {
-            store = "inmemory"
-          }
-          replication_factor = 1
-        }
-        final_sleep = "0s"
-      }
-      chunk_idle_period   = "5m"
-      chunk_retain_period = "30s"
-    }
-    schema_config = {
-      configs = [
-        {
-          from         = "2020-05-15"
-          store        = "boltdb-shipper"
-          object_store = "filesystem"
-          schema       = "v11"
-          index = {
-            prefix = "index_"
-            period = "24h"
-          }
-        }
-      ]
-    }
-    storage_config = {
-      boltdb_shipper = {
-        active_index_directory = "/tmp/loki/boltdb-shipper-active"
-        cache_location         = "/tmp/loki/boltdb-shipper-cache"
-        cache_ttl              = "24h"
-        shared_store           = "filesystem"
-      }
-      filesystem = {
-        directory = "/tmp/loki/chunks"
-      }
-    }
-    limits_config = {
-      enforce_metric_name        = false
-      reject_old_samples         = true
-      reject_old_samples_max_age = "168h"
-    }
-    chunk_store_config = {
-      max_look_back_period = "0s"
-    }
-    table_manager = {
-      retention_deletes_enabled = false
-      retention_period          = "0s"
-    }
+  content = templatefile("${path.module}/loki-config.yaml.tftpl", {
+    loki_data_bucket_name = aws_s3_bucket.loki_data.bucket
+    aws_region            = "ap-southeast-1"
   })
   content_type = "application/x-yaml"
 }

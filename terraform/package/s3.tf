@@ -17,3 +17,7 @@ resource "aws_s3_bucket_public_access_block" "config" {
   ignore_public_acls      = true
   restrict_public_buckets = true
 }
+
+resource "aws_s3_bucket" "loki_data" {
+  bucket = "${var.service_prefix}-loki-data-storage"
+}

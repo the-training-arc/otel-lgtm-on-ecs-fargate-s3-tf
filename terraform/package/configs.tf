@@ -2,7 +2,7 @@
 resource "aws_s3_object" "loki_config" {
   bucket = aws_s3_bucket.config.id
   key    = "loki/loki-config.yaml"
-  content = templatefile("${path.module}/loki-config.yaml.tftpl", {
+  content = templatefile("${path.module}/configs/loki-config.yaml.tftpl", {
     loki_data_bucket_name = aws_s3_bucket.loki_data.bucket
     aws_region            = "ap-southeast-1"
   })
@@ -117,75 +117,9 @@ resource "aws_s3_object" "grafana_datasources" {
 resource "aws_s3_object" "tempo_config" {
   bucket = aws_s3_bucket.config.id
   key    = "tempo/tempo-config.yaml"
-  content = yamlencode({
-    server = {
-      http_listen_port = 3200
-    }
-    storage = {
-      trace = {
-        backend = "local"
-        local = {
-          path = "/tmp/tempo/blocks"
-        }
-        wal = {
-          path = "/tmp/tempo/wal"
-        }
-      }
-    }
-    metrics_generator = {
-      registry = {
-        external_labels = {
-          source  = "tempo"
-          cluster = "${var.service_prefix}"
-        }
-      }
-    }
-    overrides = {
-      defaults = {
-        metrics_generator = {
-          processors = ["service-graphs", "span-metrics"]
-        }
-      }
-    }
-    ingester = {
-      max_block_bytes    = 1000000
-      max_block_duration = "5m"
-    }
-    compactor = {
-      compaction = {
-        block_retention = "1h"
-      }
-    }
-    distributor = {
-      receivers = {
-        otlp = {
-          protocols = {
-            grpc = {
-              endpoint = "0.0.0.0:4317"
-            }
-            http = {
-              endpoint = "0.0.0.0:4318"
-            }
-          }
-        }
-        jaeger = {
-          protocols = {
-            thrift_http = {
-              endpoint = "0.0.0.0:14268"
-            }
-            grpc = {
-              endpoint = "0.0.0.0:14250"
-            }
-          }
-        }
-      }
-    }
-    query_frontend = {
-      search = {
-        default_results_limit = 20
-        max_results_limit     = 100
-      }
-    }
+  content = templatefile("${path.module}/configs/tempo-config.yaml.tftpl", {
+    loki_data_bucket_name = aws_s3_bucket.tempo_data.bucket
+    aws_region            = "ap-southeast-1"
   })
   content_type = "application/x-yaml"
 } 

@@ -44,10 +44,10 @@ resource "aws_ecs_task_definition" "loki" {
       }
     },
     {
-      name = "loki-init"
-      image = "public.ecr.aws/docker/library/busybox:stable"
+      name      = "loki-init"
+      image     = "public.ecr.aws/docker/library/busybox:stable"
       essential = false
-      user = "root"
+      user      = "root"
       command = [
         "sh",
         "-c",
@@ -102,7 +102,7 @@ resource "aws_ecs_task_definition" "loki" {
         {
           sourceVolume  = "loki-data"
           containerPath = "/data",
-          readOnly =  false
+          readOnly      = false
         }
       ]
       logConfiguration = {
@@ -330,7 +330,7 @@ resource "aws_ecs_task_definition" "tempo" {
     },
     {
       name      = "tempo"
-      image     = "public.ecr.aws/bitnami/grafana-tempo:2.4.1"
+      image     = "grafana/tempo:latest"
       essential = true
       dependsOn = [
         {

@@ -108,11 +108,17 @@ resource "aws_iam_policy" "s3_config_read_policy_document" {
           "s3:DeleteObject",
           "s3:HeadObject",
           "s3:AbortMultipartUpload",
-          "s3:ListMultipartUploadParts"
+          "s3:ListMultipartUploadParts",
+          "s3:GetObjectTagging",
+          "s3:PutObjectTagging"
         ]
         Resource = [
           aws_s3_bucket.config.arn,
-          "${aws_s3_bucket.config.arn}/*"
+          aws_s3_bucket.loki_data.arn,
+          aws_s3_bucket.tempo_data.arn,
+          "${aws_s3_bucket.config.arn}/*",
+          "${aws_s3_bucket.loki_data.arn}/*",
+          "${aws_s3_bucket.tempo_data.arn}/*"
         ]
       },
     ]

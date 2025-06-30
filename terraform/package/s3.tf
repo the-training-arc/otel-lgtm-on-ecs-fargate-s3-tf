@@ -21,3 +21,7 @@ resource "aws_s3_bucket_public_access_block" "config" {
 resource "aws_s3_bucket" "loki_data" {
   bucket = "${var.service_prefix}-loki-data-storage"
 }
+
+resource "aws_s3_bucket" "tempo_data" {
+  bucket = "${var.service_prefix}-tempo-data-storage"
+}

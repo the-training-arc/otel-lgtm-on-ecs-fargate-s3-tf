@@ -1,0 +1,44 @@
+server:
+  http_listen_port: 3200
+
+distributor:
+  receivers:
+      otlp:
+        protocols:
+          http:
+          grpc:
+
+compactor:
+  compaction:
+    block_retention: 48h
+
+metrics_generator:
+  registry:
+    external_labels:
+      source: tempo
+      cluster: linux-microservices
+  storage:
+    path: /var/tempo/generator/wal
+    remote_write:
+    - url: http://localhost:9090/api/v1/write
+      send_exemplars: true
+
+storage:
+  trace:
+    backend: s3
+    s3:
+      bucket: ${loki_data_bucket_name}
+      region: ${aws_region}
+      endpoint: s3.${aws_region}.amazonaws.com
+      forcepathstyle: true
+      enable_dual_stack: false
+      insecure: false
+    wal:
+      path: /var/tempo/wal
+    local:
+      path: /var/tempo/blocks
+
+overrides:
+  defaults:
+    metrics_generator:
+      processors: [service-graphs, span-metrics]

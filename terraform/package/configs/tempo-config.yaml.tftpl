@@ -3,10 +3,12 @@ server:
 
 distributor:
   receivers:
-      otlp:
-        protocols:
-          http:
-          grpc:
+    otlp:
+      protocols:
+        http:
+          endpoint: 0.0.0.0:4318
+        grpc:
+          endpoint: 0.0.0.0:4317
 
 compactor:
   compaction:
@@ -27,7 +29,7 @@ storage:
   trace:
     backend: s3
     s3:
-      bucket: ${loki_data_bucket_name}
+      bucket: ${tempo_data_bucket_name}
       region: ${aws_region}
       endpoint: s3.${aws_region}.amazonaws.com
       forcepathstyle: true

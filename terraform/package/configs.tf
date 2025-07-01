@@ -118,8 +118,8 @@ resource "aws_s3_object" "tempo_config" {
   bucket = aws_s3_bucket.config.id
   key    = "tempo/tempo-config.yaml"
   content = templatefile("${path.module}/configs/tempo-config.yaml.tftpl", {
-    loki_data_bucket_name = aws_s3_bucket.tempo_data.bucket
-    aws_region            = "ap-southeast-1"
+    tempo_data_bucket_name = aws_s3_bucket.tempo_data.bucket
+    aws_region             = "ap-southeast-1"
   })
   content_type = "application/x-yaml"
 } 

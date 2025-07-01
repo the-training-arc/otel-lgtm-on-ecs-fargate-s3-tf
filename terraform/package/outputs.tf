@@ -26,4 +26,14 @@ output "tempo_load_balancer_dns" {
 output "ecs_cluster_name" {
   description = "Name of the ECS cluster"
   value       = aws_ecs_cluster.main.name
+}
+
+output "tempo_otlp_grpc_endpoint" {
+  description = "The OTLP gRPC endpoint for Tempo"
+  value       = "http://${aws_lb.tempo.dns_name}:4317"
+}
+
+output "tempo_otlp_http_endpoint" {
+  description = "The OTLP HTTP endpoint for Tempo"
+  value       = "http://${aws_lb.tempo.dns_name}:4318"
 } 

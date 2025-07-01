@@ -35,3 +35,13 @@ output "ecs_cluster_name" {
   description = "Name of the ECS cluster"
   value       = module.ecs.ecs_cluster_name
 }
+
+# output "tempo_otlp_grpc_endpoint" {
+#   description = "The OTLP gRPC endpoint for Tempo"
+#   value       = module.ecs.tempo_otlp_grpc_endpoint
+# }
+
+output "tempo_otlp_http_endpoint" {
+  description = "The OTLP HTTP endpoint for Tempo"
+  value       = module.ecs.tempo_otlp_http_endpoint
+}

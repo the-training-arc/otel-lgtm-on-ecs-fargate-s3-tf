@@ -1,5 +1,6 @@
 resource "aws_s3_bucket" "config" {
-  bucket = "${var.service_prefix}-monitoring-config"
+  bucket        = "${var.service_prefix}-monitoring-config"
+  force_destroy = true
 }
 
 resource "aws_s3_bucket_versioning" "config" {
@@ -19,9 +20,11 @@ resource "aws_s3_bucket_public_access_block" "config" {
 }
 
 resource "aws_s3_bucket" "loki_data" {
-  bucket = "${var.service_prefix}-loki-data-storage"
+  bucket        = "${var.service_prefix}-loki-data-storage"
+  force_destroy = true
 }
 
 resource "aws_s3_bucket" "tempo_data" {
-  bucket = "${var.service_prefix}-tempo-data-storage"
+  bucket        = "${var.service_prefix}-tempo-data-storage"
+  force_destroy = true
 }

@@ -88,6 +88,37 @@ resource "aws_lb_target_group" "tempo" {
   }
 }
 
+# OTLP Target Groups
+# resource "aws_lb_target_group" "tempo_otlp_grpc" {
+#   name             = "${var.service_prefix}-otlp-grpc-tg"
+#   port             = 4317
+#   protocol         = "HTTP"
+#   protocol_version = "GRPC"
+#   vpc_id           = data.aws_vpc.selected.id
+#   target_type      = "ip"
+
+#   health_check {
+#     matcher             = "0-99"
+#     healthy_threshold   = 2
+#     unhealthy_threshold = 10
+#   }
+# }
+
+resource "aws_lb_target_group" "tempo_otlp_http" {
+  name        = "${var.service_prefix}-otlp-http-tg"
+  port        = 4318
+  protocol    = "HTTP"
+  vpc_id      = data.aws_vpc.selected.id
+  target_type = "ip"
+
+  health_check {
+    port                = "3200"
+    path                = "/ready"
+    healthy_threshold   = 2
+    unhealthy_threshold = 10
+  }
+}
+
 # Listeners
 resource "aws_lb_listener" "loki" {
   load_balancer_arn = aws_lb.loki.arn
@@ -130,5 +161,30 @@ resource "aws_lb_listener" "tempo" {
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.tempo.arn
+  }
+}
+
+# OTLP Listeners
+# resource "aws_lb_listener" "tempo_otlp_grpc" {
+#   load_balancer_arn = aws_lb.tempo.arn
+#   port              = 4317
+#   protocol          = "HTTPS"
+#   ssl_policy        = "ELBSecurityPolicy-TLS-1-2-2017-01"
+#   certificate_arn   = "arn:aws:acm:ap-southeast-1:767397834880:certificate/your-certificate-id"  # Replace with your actual certificate ARN
+
+#   default_action {
+#     type             = "forward"
+#     target_group_arn = aws_lb_target_group.tempo_otlp_grpc.arn
+#   }
+# }
+
+resource "aws_lb_listener" "tempo_otlp_http" {
+  load_balancer_arn = aws_lb.tempo.arn
+  port              = 4318
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.tempo_otlp_http.arn
   }
 }

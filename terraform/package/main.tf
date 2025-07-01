@@ -88,5 +88,17 @@ resource "aws_ecs_service" "tempo" {
     container_port   = 3200
   }
 
-  depends_on = [aws_lb_listener.tempo]
+  # load_balancer {
+  #   target_group_arn = aws_lb_target_group.tempo_otlp_grpc.arn
+  #   container_name   = "tempo"
+  #   container_port   = 4317
+  # }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.tempo_otlp_http.arn
+    container_name   = "tempo"
+    container_port   = 4318
+  }
+
+  depends_on = [aws_lb_listener.tempo, aws_lb_listener.tempo_otlp_http]
 }

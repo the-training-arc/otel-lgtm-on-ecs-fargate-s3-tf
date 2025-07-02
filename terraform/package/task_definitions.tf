@@ -116,6 +116,10 @@ resource "aws_ecs_task_definition" "loki" {
       }
     }
   ])
+
+  depends_on = [
+    aws_s3_object.loki_config
+  ]
 }
 
 # Prometheus Task Definition
@@ -176,7 +180,9 @@ resource "aws_ecs_task_definition" "prometheus" {
         hostPort      = 9090
       }]
       command = [
-        "--config.file=/config/prometheus.yml"
+        "--config.file=/config/prometheus.yml",
+        "--web.listen-address=0.0.0.0:9090",
+        "--web.enable-remote-write-receiver"
       ]
       mountPoints = [
         {
@@ -196,6 +202,10 @@ resource "aws_ecs_task_definition" "prometheus" {
       }
     }
   ])
+
+  depends_on = [
+    aws_s3_object.prometheus_config
+  ]
 }
 
 # Grafana Task Definition
@@ -283,6 +293,8 @@ resource "aws_ecs_task_definition" "grafana" {
       }
     }
   ])
+
+  depends_on = [aws_s3_object.grafana_datasources]
 }
 
 # Tempo Task Definition
@@ -385,4 +397,6 @@ resource "aws_ecs_task_definition" "tempo" {
       }
     }
   ])
+
+  depends_on = [aws_s3_object.tempo_config]
 }

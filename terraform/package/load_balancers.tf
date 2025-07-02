@@ -56,7 +56,10 @@ resource "aws_lb_target_group" "prometheus" {
   health_check {
     path                = "/-/healthy"
     healthy_threshold   = 2
-    unhealthy_threshold = 10
+    unhealthy_threshold = 5
+    timeout             = 30
+    interval            = 60
+    matcher             = "200"
   }
 }
 

@@ -22,7 +22,7 @@ metrics_generator:
   storage:
     path: /var/tempo/generator/wal
     remote_write:
-    - url: http://localhost:9090/api/v1/write
+    - url: http://${prometheus_lb_dns_name}/api/v1/write
       send_exemplars: true
 
 storage:

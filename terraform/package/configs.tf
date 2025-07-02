@@ -24,7 +24,7 @@ resource "aws_s3_object" "prometheus_config" {
         job_name = "prometheus"
         static_configs = [
           {
-            targets = ["localhost:9090"]
+            targets = ["prometheus:9090"]
           }
         ]
       },
@@ -87,8 +87,12 @@ resource "aws_s3_object" "grafana_datasources" {
         name      = "Prometheus"
         type      = "prometheus"
         access    = "proxy"
+        uid       = "prometheus"
         url       = "http://${aws_lb.prometheus.dns_name}"
         isDefault = true
+        jsonData = {
+          httpMethod = "GET"
+        }
       },
       {
         name   = "Loki"
@@ -100,6 +104,7 @@ resource "aws_s3_object" "grafana_datasources" {
         name   = "Tempo"
         type   = "tempo"
         access = "proxy"
+        uid    = "tempo"
         url    = "http://${aws_lb.tempo.dns_name}"
         jsonData = {
           httpMethod = "GET"
@@ -120,6 +125,7 @@ resource "aws_s3_object" "tempo_config" {
   content = templatefile("${path.module}/configs/tempo-config.yaml.tftpl", {
     tempo_data_bucket_name = aws_s3_bucket.tempo_data.bucket
     aws_region             = "ap-southeast-1"
+    prometheus_lb_dns_name = aws_lb.prometheus.dns_name
   })
   content_type = "application/x-yaml"
 } 

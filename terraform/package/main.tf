@@ -44,6 +44,8 @@ resource "aws_ecs_service" "prometheus" {
     container_port   = 9090
   }
 
+  health_check_grace_period_seconds = 60
+
   depends_on = [aws_lb_listener.prometheus]
 }
 
@@ -100,5 +102,5 @@ resource "aws_ecs_service" "tempo" {
     container_port   = 4318
   }
 
-  depends_on = [aws_lb_listener.tempo, aws_lb_listener.tempo_otlp_http]
+  depends_on = [aws_lb_listener.tempo, aws_lb_listener.tempo_otlp_http, aws_ecs_service.prometheus]
 }

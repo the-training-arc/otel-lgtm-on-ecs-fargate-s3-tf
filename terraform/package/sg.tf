@@ -1,8 +1,8 @@
-
 resource "aws_security_group" "monitoring" {
   name_prefix = "${var.service_prefix}-monitoring-sg"
   vpc_id      = data.aws_vpc.selected.id
 
+  # External access rules
   ingress {
     from_port   = 80
     to_port     = 80
@@ -72,6 +72,14 @@ resource "aws_security_group" "monitoring" {
     to_port     = 16686
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Internal service-to-service communication
+  ingress {
+    from_port = 0
+    to_port   = 65535
+    protocol  = "tcp"
+    self      = true
   }
 
   egress {

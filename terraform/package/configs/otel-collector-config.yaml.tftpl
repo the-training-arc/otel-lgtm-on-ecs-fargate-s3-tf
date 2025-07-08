@@ -1,0 +1,60 @@
+receivers:
+  otlp:
+    protocols:
+      # grpc:
+      #   endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 1500
+  resource:
+    attributes:
+      - key: environment
+        value: "production"
+        action: upsert
+
+exporters:
+  # Export traces to Tempo
+  otlphttp/tempo:
+    endpoint: "http://${tempo_lb_dns_name}:4318"
+    tls:
+      insecure: true
+  
+  # Export logs to Loki
+  otlphttp:
+    endpoint: "http://${loki_lb_dns_name}:3100/otlp"
+    tls:
+      insecure: true
+
+  # Export metrics to Prometheus via remote write
+  prometheusremotewrite:
+    endpoint: "http://${prometheus_lb_dns_name}/api/v1/write"
+    tls:
+      insecure: true
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+service:
+  pipelines:
+    traces:
+      receivers:  [otlp]
+      processors: [batch, memory_limiter, resource]
+      exporters:  [otlphttp/tempo]
+    logs:
+      receivers: [otlp]
+      processors: [batch, memory_limiter, resource]
+      exporters: [otlphttp]
+    metrics:
+      receivers: [otlp]
+      processors: [batch, memory_limiter, resource]
+      exporters: [prometheusremotewrite]
+
+  extensions: [health_check] 

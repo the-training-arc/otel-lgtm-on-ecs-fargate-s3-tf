@@ -40,13 +40,6 @@ resource "aws_security_group" "monitoring" {
   }
 
   ingress {
-    from_port   = 4317
-    to_port     = 4317
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
     from_port   = 4318
     to_port     = 4318
     protocol    = "tcp"
@@ -80,6 +73,22 @@ resource "aws_security_group" "monitoring" {
     to_port   = 65535
     protocol  = "tcp"
     self      = true
+  }
+
+  # OTEL Collector health check port
+  ingress {
+    from_port   = 13133
+    to_port     = 13133
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # OTEL Collector ports
+  ingress {
+    from_port   = 8888
+    to_port     = 8889
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {

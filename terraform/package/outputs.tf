@@ -28,12 +28,22 @@ output "ecs_cluster_name" {
   value       = aws_ecs_cluster.main.name
 }
 
-output "tempo_otlp_grpc_endpoint" {
-  description = "The OTLP gRPC endpoint for Tempo"
-  value       = "http://${aws_lb.tempo.dns_name}:4317"
-}
-
 output "tempo_otlp_http_endpoint" {
   description = "The OTLP HTTP endpoint for Tempo"
   value       = "http://${aws_lb.tempo.dns_name}:4318"
+}
+
+output "loki_otlp_http_endpoint" {
+  description = "The OTLP HTTP endpoint for Loki"
+  value       = "http://${aws_lb.loki.dns_name}:4318"
+}
+
+output "otel_collector_load_balancer_dns" {
+  description = "The DNS name of the load balancer for the OpenTelemetry Collector service"
+  value       = aws_lb.otel_collector.dns_name
+}
+
+output "shared_otlp_http_endpoint" {
+  description = "The shared OTLP HTTP endpoint for traces and logs"
+  value       = "http://${aws_lb.otel_collector.dns_name}:4318"
 } 

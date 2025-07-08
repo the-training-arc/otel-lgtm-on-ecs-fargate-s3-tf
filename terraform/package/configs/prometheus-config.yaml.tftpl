@@ -1,0 +1,49 @@
+global:
+  evaluation_interval: 15s
+  scrape_interval: 15s
+remote_write:
+- remote_timeout: 30s
+  url: http://prometheus:9090/api/v1/write
+  write_relabel_configs: []
+rule_files: []
+scrape_configs:
+- job_name: prometheus
+  static_configs:
+  - targets:
+    - prometheus:9090
+- job_name: otel-collector
+  metrics_path: /metrics
+  static_configs:
+  - targets:
+    - ${otel_collector_lb_dns_name}:9464
+- ec2_sd_configs:
+  - filters:
+    - name: tag:Name
+      values:
+      - My Node Service
+    port: 3000
+    region: ap-southeast-1
+  job_name: ec2-instances
+  metrics_path: /api/metrics
+  relabel_configs:
+  - action: replace
+    source_labels:
+    - __meta_ec2_instance_id
+    target_label: instance_id
+  - action: replace
+    source_labels:
+    - __meta_ec2_private_ip
+    target_label: ip
+  - action: replace
+    source_labels:
+    - __meta_ec2_tag_Name
+    target_label: instance_name
+  - action: replace
+    source_labels:
+    - __meta_ec2_tag_Environment
+    target_label: environment
+  - action: replace
+    source_labels:
+    - __meta_ec2_availability_zone
+    target_label: availability_zone
+storage:

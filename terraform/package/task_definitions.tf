@@ -140,6 +140,10 @@ resource "aws_ecs_task_definition" "prometheus" {
     name = "config-volume"
   }
 
+  volume {
+    name = "prometheus-data"
+  }
+
   container_definitions = jsonencode([
     {
       name      = "config-sync"
@@ -166,12 +170,46 @@ resource "aws_ecs_task_definition" "prometheus" {
       }
     },
     {
-      name      = "prometheus"
-      image     = "public.ecr.aws/bitnami/prometheus:latest"
-      essential = true
+      name      = "prometheus-init"
+      image     = "public.ecr.aws/docker/library/busybox:stable"
+      essential = false
+      user      = "root"
+      command = [
+        "sh",
+        "-c",
+        "chown -R 65534:65534 /data && chmod -R 755 /data"
+      ]
+      mountPoints = [
+        {
+          sourceVolume  = "prometheus-data"
+          containerPath = "/data"
+          readOnly      = false
+        }
+      ]
       dependsOn = [
         {
           containerName = "config-sync"
+          condition     = "SUCCESS"
+        }
+      ]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = "/ecs/${var.service_prefix}-prometheus"
+          awslogs-create-group  = "true"
+          awslogs-region        = "ap-southeast-1"
+          awslogs-stream-prefix = "prometheus-init"
+        }
+      }
+    },
+    {
+      name      = "prometheus"
+      image     = "prom/prometheus:latest"
+      essential = true
+      user      = "65534"
+      dependsOn = [
+        {
+          containerName = "prometheus-init"
           condition     = "SUCCESS"
         }
       ]
@@ -182,13 +220,19 @@ resource "aws_ecs_task_definition" "prometheus" {
       command = [
         "--config.file=/config/prometheus.yml",
         "--web.listen-address=0.0.0.0:9090",
-        "--web.enable-remote-write-receiver"
+        "--web.enable-remote-write-receiver",
+        "--storage.tsdb.retention.time=15d",
       ]
       mountPoints = [
         {
           sourceVolume  = "config-volume"
           containerPath = "/config"
           readOnly      = true
+        },
+        {
+          sourceVolume  = "prometheus-data"
+          containerPath = "/prometheus/data"
+          readOnly      = false
         }
       ]
       logConfiguration = {
@@ -399,4 +443,100 @@ resource "aws_ecs_task_definition" "tempo" {
   ])
 
   depends_on = [aws_s3_object.tempo_config]
+}
+
+# OpenTelemetry Collector Task Definition
+resource "aws_ecs_task_definition" "otel_collector" {
+  family                   = "${var.service_prefix}-otel-collector"
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
+  cpu                      = "512"
+  memory                   = "1024"
+  execution_role_arn       = aws_iam_role.task_exec_role.arn
+  task_role_arn            = aws_iam_role.monitoring_task_role.arn
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  volume {
+    name = "config-volume"
+  }
+
+  container_definitions = jsonencode([
+    {
+      name      = "config-sync"
+      image     = "amazon/aws-cli:latest"
+      essential = false
+      command = [
+        "s3", "cp", "s3://${aws_s3_bucket.config.bucket}/otel-collector/otel-collector-config.yaml", "/config/otel-collector-config.yaml"
+      ]
+      mountPoints = [
+        {
+          sourceVolume  = "config-volume"
+          containerPath = "/config"
+          readOnly      = false
+        }
+      ]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = "/ecs/${var.service_prefix}-otel-collector-config-sync"
+          awslogs-create-group  = "true"
+          awslogs-region        = "ap-southeast-1"
+          awslogs-stream-prefix = "ecs"
+        }
+      }
+    },
+    {
+      name      = "otel-collector"
+      image     = "otel/opentelemetry-collector-contrib:latest"
+      essential = true
+      dependsOn = [
+        {
+          containerName = "config-sync"
+          condition     = "SUCCESS"
+        }
+      ]
+      portMappings = [
+        {
+          containerPort = 4318
+          hostPort      = 4318
+        },
+        {
+          containerPort = 8888
+          hostPort      = 8888
+        },
+        {
+          containerPort = 8889
+          hostPort      = 8889
+        },
+        {
+          containerPort = 13133
+          hostPort      = 13133
+        }
+      ]
+      command = [
+        "--config=/config/otel-collector-config.yaml"
+      ]
+      mountPoints = [
+        {
+          sourceVolume  = "config-volume"
+          containerPath = "/config"
+          readOnly      = true
+        }
+      ]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = "/ecs/${var.service_prefix}-otel-collector"
+          awslogs-create-group  = "true"
+          awslogs-region        = "ap-southeast-1"
+          awslogs-stream-prefix = "ecs"
+        }
+      }
+    }
+  ])
+
+  depends_on = [aws_s3_object.otel_collector_config]
 }

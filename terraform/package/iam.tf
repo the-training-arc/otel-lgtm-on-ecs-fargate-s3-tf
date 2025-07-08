@@ -116,9 +116,11 @@ resource "aws_iam_policy" "s3_config_read_policy_document" {
           aws_s3_bucket.config.arn,
           aws_s3_bucket.loki_data.arn,
           aws_s3_bucket.tempo_data.arn,
+          aws_s3_bucket.prometheus_data.arn,
           "${aws_s3_bucket.config.arn}/*",
           "${aws_s3_bucket.loki_data.arn}/*",
-          "${aws_s3_bucket.tempo_data.arn}/*"
+          "${aws_s3_bucket.tempo_data.arn}/*",
+          "${aws_s3_bucket.prometheus_data.arn}/*"
         ]
       },
     ]

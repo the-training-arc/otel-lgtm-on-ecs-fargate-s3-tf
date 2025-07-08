@@ -90,17 +90,44 @@ resource "aws_ecs_service" "tempo" {
     container_port   = 3200
   }
 
-  # load_balancer {
-  #   target_group_arn = aws_lb_target_group.tempo_otlp_grpc.arn
-  #   container_name   = "tempo"
-  #   container_port   = 4317
-  # }
-
   load_balancer {
     target_group_arn = aws_lb_target_group.tempo_otlp_http.arn
     container_name   = "tempo"
     container_port   = 4318
   }
 
-  depends_on = [aws_lb_listener.tempo, aws_lb_listener.tempo_otlp_http, aws_ecs_service.prometheus]
+  depends_on = [aws_lb_listener.tempo, aws_ecs_service.prometheus]
+}
+
+# OpenTelemetry Collector Service
+resource "aws_ecs_service" "otel_collector" {
+  name            = "${var.service_prefix}-otel-collector-service"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.otel_collector.arn
+  launch_type     = "FARGATE"
+  desired_count   = 1
+
+  network_configuration {
+    subnets          = local.public_subnet_ids
+    security_groups  = [aws_security_group.monitoring.id]
+    assign_public_ip = true
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.otel_collector_otlp_http.arn
+    container_name   = "otel-collector"
+    container_port   = 4318
+  }
+
+  health_check_grace_period_seconds = 60
+
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
+
+  deployment_minimum_healthy_percent = 50
+  deployment_maximum_percent         = 200
+
+  depends_on = [aws_lb_listener.otel_collector_otlp_http]
 }

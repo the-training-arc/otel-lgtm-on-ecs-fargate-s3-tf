@@ -9,6 +9,18 @@ resource "aws_lb_listener" "loki" {
   }
 }
 
+# Add this new listener for port 3100
+resource "aws_lb_listener" "loki_otlp" {
+  load_balancer_arn = aws_lb.loki.arn
+  port              = 3100
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.loki.arn
+  }
+}
+
 resource "aws_lb_listener" "prometheus" {
   load_balancer_arn = aws_lb.prometheus.arn
   port              = 80

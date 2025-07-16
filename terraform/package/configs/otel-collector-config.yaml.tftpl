@@ -1,42 +1,52 @@
 receivers:
   otlp:
     protocols:
-      # grpc:
-      #   endpoint: 0.0.0.0:4317
       http:
         endpoint: 0.0.0.0:4318
 
 processors:
-  batch:
-    timeout: 1s
-    send_batch_size: 1024
   memory_limiter:
     check_interval: 1s
     limit_mib: 1500
-  resource:
+
+  # 1. copy active span IDs onto every log record
+  transform/add_trace_context:
+    log_statements:
+      - context: log
+        statements:
+          - set(attributes["trace_id"], trace_id.string)
+          - set(attributes["span_id"],  span_id.string)
+  # 2. tell Loki to index those attributes as labels
+  attributes/loki_label_hints:
+    actions:
+      - action: insert
+        key: loki.attribute.labels
+        value: trace_id,span_id,service.name
+
+  # 3. add a common environment tag
+  resource/add_env:
     attributes:
       - key: environment
-        value: "production"
+        value: production
         action: upsert
 
-exporters:
-  # Export traces to Tempo
-  otlphttp/tempo:
-    endpoint: "http://${tempo_lb_dns_name}:4318"
-    tls:
-      insecure: true
-  
-  # Export logs to Loki
-  otlphttp:
-    endpoint: "http://${loki_lb_dns_name}:3100/otlp"
-    tls:
-      insecure: true
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
 
-  # Export metrics to Prometheus via remote write
-  prometheusremotewrite:
+exporters:
+  otlphttp/tempo:            # traces → Tempo
+    endpoint: "http://${tempo_lb_dns_name}:4318"
+    tls: { insecure: true }
+
+  otlphttp/loki:             # logs → Loki OTLP endpoint
+    endpoint: "http://${loki_lb_dns_name}:3100/otlp"
+    tls: { insecure: true }
+    compression: gzip
+
+  prometheusremotewrite:     # metrics → Prometheus
     endpoint: "http://${prometheus_lb_dns_name}/api/v1/write"
-    tls:
-      insecure: true
+    tls: { insecure: true }
 
 extensions:
   health_check:
@@ -46,15 +56,20 @@ service:
   pipelines:
     traces:
       receivers:  [otlp]
-      processors: [batch, memory_limiter, resource]
+      processors: [memory_limiter, batch, resource/add_env]
       exporters:  [otlphttp/tempo]
-    logs:
-      receivers: [otlp]
-      processors: [batch, memory_limiter, resource]
-      exporters: [otlphttp]
-    metrics:
-      receivers: [otlp]
-      processors: [batch, memory_limiter, resource]
-      exporters: [prometheusremotewrite]
 
-  extensions: [health_check] 
+    logs:
+      receivers:  [otlp]
+      processors: [memory_limiter,
+                   transform/add_trace_context,
+                   attributes/loki_label_hints,
+                   batch, resource/add_env]
+      exporters:  [otlphttp/loki]
+
+    metrics:
+      receivers:  [otlp]
+      processors: [memory_limiter, batch, resource/add_env]
+      exporters:  [prometheusremotewrite]
+
+  extensions: [health_check]

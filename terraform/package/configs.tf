@@ -41,6 +41,7 @@ resource "aws_s3_object" "grafana_datasources" {
         name   = "Loki"
         type   = "loki"
         access = "proxy"
+        uid    = "loki"
         url    = "http://${aws_lb.loki.dns_name}"
       },
       {
@@ -53,6 +54,32 @@ resource "aws_s3_object" "grafana_datasources" {
           httpMethod = "GET"
           serviceMap = {
             datasourceUid = "prometheus"
+          }
+          tracesToLogsV2 = {
+            datasourceUid = "loki"
+            spanStartTimeShift = "-1m"
+            spanEndTimeShift = "1m"
+            tags = [
+              {
+                key   = "service.name"
+                value = "service_name"
+              },
+            ]
+            filterByTraceID = true
+            filterBySpanID = true
+            customQuery = false
+          }
+          tracesToMetrics = {
+            datasourceUid = "prometheus"
+            spanStartTimeShift = "-2m"
+            spanEndTimeShift = "2m"
+            tags = [
+              {
+                key   = "service.name"
+                value = "service"
+              },
+            ]
+            customQuery = false
           }
         }
       }
